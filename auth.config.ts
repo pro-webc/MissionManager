@@ -4,6 +4,10 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
+  // adapter 無し時のデフォルトも jwt だが、ミドルウェア用インスタンスと auth.ts を明示的に一致させる
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;

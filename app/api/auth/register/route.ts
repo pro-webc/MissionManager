@@ -13,9 +13,20 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const email = (body.email ?? "").trim().toLowerCase();
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json(
+        { error: "リクエスト本文が不正です（JSON が必要です）" },
+        { status: 400 }
+      );
+    }
+
+    const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
+    const name =
+      typeof body.name === "string" ? body.name.trim() || null : null;
 
     if (!email) {
       return NextResponse.json(
@@ -51,7 +62,7 @@ export async function POST(request: NextRequest) {
       data: {
         email,
         passwordHash,
-        name: body.name?.trim() || null,
+        name,
       },
     });
 
