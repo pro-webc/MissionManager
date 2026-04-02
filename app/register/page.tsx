@@ -11,11 +11,13 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setErrorCode("");
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -28,21 +30,36 @@ export default function RegisterPage() {
         }),
       });
       const raw = await res.text();
-      let data: { error?: string; prismaCode?: string | null } = {};
+      let data: {
+        error?: string;
+        code?: string;
+        prismaCode?: string | null;
+      } = {};
       try {
-        data = raw ? (JSON.parse(raw) as { error?: string; prismaCode?: string | null }) : {};
+        data = raw
+          ? (JSON.parse(raw) as {
+              error?: string;
+              code?: string;
+              prismaCode?: string | null;
+            })
+          : {};
       } catch {
         /* 非JSON（プロキシエラーHTMLなど） */
       }
       if (!res.ok) {
-        const base =
+        setError(
           data.error ??
-          `登録に失敗しました（HTTP ${res.status}）。Vercel の Function ログを確認してください。`;
-        const code =
-          data.prismaCode != null && data.prismaCode !== ""
-            ? ` [Prisma: ${data.prismaCode}]`
-            : "";
-        setError(base + code);
+            `登録に失敗しました（HTTP ${res.status}）。Vercel の Function ログを確認してください。`
+        );
+        const apiCode = data.code?.trim();
+        const prisma = data.prismaCode?.trim();
+        if (apiCode) {
+          setErrorCode(prisma ? `${apiCode}（Prisma ${prisma}）` : apiCode);
+        } else if (prisma) {
+          setErrorCode(`Prisma ${prisma}`);
+        } else {
+          setErrorCode(`HTTP_${res.status}`);
+        }
         return;
       }
       const signInRes = await signIn("credentials", {
@@ -54,9 +71,11 @@ export default function RegisterPage() {
         window.location.href = "/";
       } else {
         setError("登録は完了しましたがログインに失敗しました。ログインページからお試しください。");
+        setErrorCode("REGISTER_SIGNIN_FAILED");
       }
     } catch {
-      setError("登録に失敗しました");
+      setError("登録に失敗しました（ネットワーク等）");
+      setErrorCode("REGISTER_CLIENT_ERROR");
     } finally {
       setLoading(false);
     }
@@ -110,7 +129,14 @@ export default function RegisterPage() {
             />
           </div>
           {error && (
-            <p className="text-red-400 text-sm">{error}</p>
+            <div className="rounded border border-red-900/80 bg-red-950/40 px-3 py-2 space-y-1">
+              <p className="text-red-300 text-sm">{error}</p>
+              {errorCode ? (
+                <p className="text-amber-400/90 text-xs font-mono tracking-wide">
+                  エラーコード: {errorCode}
+                </p>
+              ) : null}
+            </div>
           )}
           <button
             type="submit"
