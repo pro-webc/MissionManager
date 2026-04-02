@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String?
+  createdAt    DateTime  @default(now())
+  genres       Genre[]
+}
+
+model Genre {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  summary   String?
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  missions  Mission[]
+}
+
+model Mission {
+  id          String    @id @default(uuid())
+  genreId     String    @map("genre_id")
+  genre       Genre     @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  name        String
+  summary     String?
+  dueDate     DateTime? @map("due_date") @db.Date
+  completedAt DateTime? @map("completed_at")
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  tasks       Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  missionId   String    @map("mission_id")
+  mission     Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  name        String
+  summary     String?
+  done        Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  dueDate     DateTime? @map("due_date") @db.Date
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+}
