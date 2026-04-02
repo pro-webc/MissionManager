@@ -86,7 +86,14 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof Prisma.PrismaClientInitializationError) {
       return jsonError(
-        "データベースに接続できません（初期化エラー）。Vercel の DATABASE_URL / DIRECT_URL と Supabase の Connect 文字列を照合し、パスワードに記号がある場合は URL エンコードしてください。",
+        [
+          "データベース接続の初期化に失敗しました（本番では Vercel の環境変数がほぼ原因です）。",
+          "① Vercel → Project → Settings → Environment Variables で DATABASE_URL・DIRECT_URL・AUTH_SECRET を「Production」に設定しているか。",
+          "② 値の先頭・末尾に \"（ダブルクォート）を付けない（.env 用の引用符をそのまま貼っていないか）。",
+          "③ DB パスワードに ! @ # などがある場合は URL エンコード（例: ! → %21、@ → %40）した URI にする。",
+          "④ DIRECT_URL は db.*.supabase.co 直結より、Supabase Connect の Session（aws-0-*.pooler.supabase.com:5432）を推奨。",
+          "⑤ 変更後は必ず Redeploy。",
+        ].join(" "),
         "REGISTER_DB_INIT",
         503
       );
