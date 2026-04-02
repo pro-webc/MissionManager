@@ -85,18 +85,33 @@ export async function POST(request: NextRequest) {
     console.error("POST /api/auth/register:", error);
 
     if (error instanceof Prisma.PrismaClientInitializationError) {
-      return jsonError(
-        [
-          "データベース接続の初期化に失敗しました（本番では Vercel の環境変数がほぼ原因です）。",
-          "① Vercel → Project → Settings → Environment Variables で DATABASE_URL・DIRECT_URL・AUTH_SECRET を「Production」に設定しているか。",
-          "② 値の先頭・末尾に \"（ダブルクォート）を付けない（.env 用の引用符をそのまま貼っていないか）。",
-          "③ DB パスワードに ! @ # などがある場合は URL エンコード（例: ! → %21、@ → %40）した URI にする。",
-          "④ DIRECT_URL は db.*.supabase.co 直結より、Supabase Connect の Session（aws-0-*.pooler.supabase.com:5432）を推奨。",
-          "⑤ 変更後は必ず Redeploy。",
-        ].join(" "),
-        "REGISTER_DB_INIT",
-        503
-      );
+      const onVercel = Boolean(process.env.VERCEL);
+      const localHint = [
+        "データベース接続の初期化に失敗しました（ローカル開発中）。",
+        "① プロジェクト直下の .env に DATABASE_URL と DIRECT_URL があるか確認する。",
+        "② DB パスワードに ! などがある場合は URI 内で %21 などにエンコードする。",
+        "③ .env を直したあとは、開発サーバーを一度止めてから npm run dev で**再起動**する（起動中の Node は古い環境変数のままのことがあります）。",
+        "④ ターミナルで npx prisma db execute --stdin <<< \"SELECT 1\" が成功するか試す。",
+        "⑤ ブラウザで /api/health/db を開いて接続状況を確認する。",
+      ].join(" ");
+      const vercelHint = [
+        "データベース接続の初期化に失敗しました（本番・Vercel 上）。",
+        "① Vercel → Settings → Environment Variables で DATABASE_URL・DIRECT_URL・AUTH_SECRET を「Production」に設定しているか。",
+        "② 値の先頭・末尾にダブルクォートを付けない。",
+        "③ パスワードの記号は URL エンコード（! → %21 など）。",
+        "④ DIRECT_URL は Supabase Connect の Session（pooler :5432）推奨。",
+        "⑤ 保存後に Redeploy。",
+      ].join(" ");
+      const isNextDev = process.env.NODE_ENV === "development";
+      const message = onVercel
+        ? vercelHint
+        : isNextDev
+          ? localHint
+          : [
+              "データベース接続の初期化に失敗しました。",
+              ".env の DATABASE_URL / DIRECT_URL、パスワードの URL エンコード（!→%21 等）を確認し、変更後はサーバー再起動または Vercel の Redeploy を行ってください。",
+            ].join(" ");
+      return jsonError(message, "REGISTER_DB_INIT", 503);
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
