@@ -28,17 +28,21 @@ export default function RegisterPage() {
         }),
       });
       const raw = await res.text();
-      let data: { error?: string } = {};
+      let data: { error?: string; prismaCode?: string | null } = {};
       try {
-        data = raw ? (JSON.parse(raw) as { error?: string }) : {};
+        data = raw ? (JSON.parse(raw) as { error?: string; prismaCode?: string | null }) : {};
       } catch {
         /* 非JSON（プロキシエラーHTMLなど） */
       }
       if (!res.ok) {
-        setError(
+        const base =
           data.error ??
-            `登録に失敗しました（HTTP ${res.status}）。Vercel の Function ログを確認してください。`
-        );
+          `登録に失敗しました（HTTP ${res.status}）。Vercel の Function ログを確認してください。`;
+        const code =
+          data.prismaCode != null && data.prismaCode !== ""
+            ? ` [Prisma: ${data.prismaCode}]`
+            : "";
+        setError(base + code);
         return;
       }
       const signInRes = await signIn("credentials", {

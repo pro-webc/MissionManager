@@ -59,22 +59,85 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("POST /api/auth/register:", error);
 
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json(
+        {
+          error:
+            "データベースに接続できません（初期化エラー）。Vercel の DATABASE_URL / DIRECT_URL と Supabase の Connect 文字列を照合し、パスワードに記号がある場合は URL エンコードしてください。",
+          prismaCode: "INIT",
+        },
+        { status: 503 }
+      );
+    }
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2021") {
         return NextResponse.json(
           {
             error:
               "データベースにユーザー用のテーブルがありません。デプロイ時にマイグレーション（prisma migrate deploy）が実行されているか、Vercel の DATABASE_URL / DIRECT_URL を確認してください。",
+            prismaCode: error.code,
           },
           { status: 503 }
         );
       }
       if (error.code === "P2002") {
         return NextResponse.json(
-          { error: "このメールアドレスはすでに登録されています" },
+          { error: "このメールアドレスはすでに登録されています", prismaCode: error.code },
           { status: 400 }
         );
       }
+
+      const connectionCodes = new Set([
+        "P1000",
+        "P1001",
+        "P1002",
+        "P1003",
+        "P1008",
+        "P1010",
+        "P1011",
+        "P1017",
+      ]);
+      if (connectionCodes.has(error.code)) {
+        return NextResponse.json(
+          {
+            error:
+              "データベースに接続できないか、タイムアウトしました。DATABASE_URL（6543 + pgbouncer=true）、IPv6 不可なら Session プールの DIRECT_URL（5432）を使う、接続数は connection_limit=1 を試してください。",
+            prismaCode: error.code,
+          },
+          { status: 503 }
+        );
+      }
+
+      if (error.code === "P2010") {
+        const metaMsg =
+          typeof error.meta?.message === "string" ? error.meta.message : error.message;
+        if (/does not exist/i.test(metaMsg) || /relation/i.test(metaMsg)) {
+          return NextResponse.json(
+            {
+              error:
+                "DBのテーブルが見つかりません。本番でマイグレーションが適用されているか、接続先データベースが正しいか確認してください。",
+              prismaCode: error.code,
+            },
+            { status: 503 }
+          );
+        }
+      }
+
+      return NextResponse.json(
+        {
+          error: `データベース処理に失敗しました（Prisma ${error.code}）。Vercel の Function ログの直前のスタックを確認してください。`,
+          prismaCode: error.code,
+        },
+        { status: 503 }
+      );
+    }
+
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      return NextResponse.json(
+        { error: "サーバー側のデータ形式エラーです。管理者に連絡してください。", prismaCode: "VALIDATION" },
+        { status: 500 }
+      );
     }
 
     const msg = error instanceof Error ? error.message : String(error);
@@ -105,37 +168,12 @@ export async function POST(request: NextRequest) {
     if (error instanceof Prisma.PrismaClientUnknownRequestError) {
       console.error("POST /api/auth/register (unknown):", error.message);
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2010"
-    ) {
-      const metaMsg = typeof error.meta?.message === "string" ? error.meta.message : msg;
-      if (/does not exist/i.test(metaMsg) || /relation/i.test(metaMsg)) {
-        return NextResponse.json(
-          {
-            error:
-              "DBのテーブルが見つかりません。本番でマイグレーションが適用されているか、接続先データベースが正しいか確認してください。",
-          },
-          { status: 503 }
-        );
-      }
-    }
-    if (
-      error instanceof Prisma.PrismaClientInitializationError ||
-      (error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === "P1001" || error.code === "P1017"))
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "データベースに接続できません。DATABASE_URL（および Supabase 利用時は DIRECT_URL）が本番用に正しく設定されているか確認してください。",
-        },
-        { status: 503 }
-      );
-    }
 
     return NextResponse.json(
-      { error: "登録に失敗しました" },
+      {
+        error: `登録に失敗しました（${error instanceof Error ? error.name : "unknown"}）。Vercel のログを確認してください。`,
+        prismaCode: null,
+      },
       { status: 500 }
     );
   }
