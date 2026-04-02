@@ -3,6 +3,8 @@ import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
+export const runtime = "nodejs";
+
 const MIN_PASSWORD_LENGTH = 8;
 
 function isValidEmail(email: string): boolean {
@@ -67,6 +69,23 @@ export async function POST(request: NextRequest) {
           { status: 503 }
         );
       }
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          { error: "このメールアドレスはすでに登録されています" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const msg = error instanceof Error ? error.message : String(error);
+    if (/prepared statement/i.test(msg)) {
+      return NextResponse.json(
+        {
+          error:
+            "DB接続（プール）の設定が不十分です。Vercel の DATABASE_URL 末尾に ?pgbouncer=true を付けたうえで、&connection_limit=1 を追加してください（ローカルの .env と一致させる）。",
+        },
+        { status: 503 }
+      );
     }
     if (
       error instanceof Prisma.PrismaClientInitializationError ||
