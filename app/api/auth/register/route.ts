@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const msg = error instanceof Error ? error.message : String(error);
+
     if (/prepared statement/i.test(msg)) {
       return NextResponse.json(
         {
@@ -86,6 +87,38 @@ export async function POST(request: NextRequest) {
         },
         { status: 503 }
       );
+    }
+
+    if (
+      /does not exist/i.test(msg) &&
+      (/relation/i.test(msg) || /table/i.test(msg) || /\"User\"/i.test(msg))
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "DBに User テーブルがありません。Vercel のデプロイログで prisma migrate deploy が成功しているか確認し、DATABASE_URL / DIRECT_URL を Supabase の Connect 画面の値に合わせてください。",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+      console.error("POST /api/auth/register (unknown):", error.message);
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2010"
+    ) {
+      const metaMsg = typeof error.meta?.message === "string" ? error.meta.message : msg;
+      if (/does not exist/i.test(metaMsg) || /relation/i.test(metaMsg)) {
+        return NextResponse.json(
+          {
+            error:
+              "DBのテーブルが見つかりません。本番でマイグレーションが適用されているか、接続先データベースが正しいか確認してください。",
+          },
+          { status: 503 }
+        );
+      }
     }
     if (
       error instanceof Prisma.PrismaClientInitializationError ||

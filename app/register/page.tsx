@@ -27,9 +27,18 @@ export default function RegisterPage() {
           name: name.trim() || undefined,
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      const raw = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = raw ? (JSON.parse(raw) as { error?: string }) : {};
+      } catch {
+        /* 非JSON（プロキシエラーHTMLなど） */
+      }
       if (!res.ok) {
-        setError(data.error ?? "登録に失敗しました");
+        setError(
+          data.error ??
+            `登録に失敗しました（HTTP ${res.status}）。Vercel の Function ログを確認してください。`
+        );
         return;
       }
       const signInRes = await signIn("credentials", {
