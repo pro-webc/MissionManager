@@ -8,7 +8,7 @@ export function Header() {
 
   return (
     <header className="border-b border-gray-700 mb-4 sm:mb-6 pb-4 flex flex-row justify-between items-center gap-3 flex-shrink-0 min-h-[3.5rem]">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-100 truncate min-w-0">MissionManagerWeb</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-100 truncate min-w-0">MissionManager for Propagate</h1>
       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
         {status === "loading" && (
           <span className="text-sm text-gray-500">読込中...</span>

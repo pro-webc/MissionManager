@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "MissionManagerWeb",
+  title: "MissionManager for Propagate",
   description: "ジャンル・ミッション・タスクの3階層でタスクを管理するWebアプリ",
 };
 

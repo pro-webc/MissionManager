@@ -1,4 +1,4 @@
-# MissionManagerWeb
+# MissionManager for Propagate
 
 部門 > プロジェクト > メインタスク > サブタスクの階層でタスクを管理する Web アプリ。
 

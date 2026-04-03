@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * MissionManagerWeb CLI
+ * MissionManager for Propagate CLI
  *
  * Usage:
  *   npx tsx cli.ts login
@@ -496,7 +496,7 @@ async function cmdSearch(session: Session, keyword: string) {
 
 // ---------- main ----------
 
-const HELP = `MissionManagerWeb CLI
+const HELP = `MissionManager for Propagate CLI
 
 使い方:
   npx tsx cli.ts login [URL]         ログイン (デフォルト: ${DEFAULT_BASE})
