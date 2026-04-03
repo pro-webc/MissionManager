@@ -75,7 +75,7 @@ function mergeCookies(existing: string, incoming: string[]): string {
     const [k, ...v] = c.split("=");
     map.set(k, v.join("="));
   }
-  return [...map.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+  return Array.from(map.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
 }
 
 async function api(
